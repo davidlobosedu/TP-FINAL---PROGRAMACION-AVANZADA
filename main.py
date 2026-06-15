@@ -105,6 +105,6 @@ class Usuario:
         self.dni = dni
         self.correo = correo
 
-    # Esta clase también tiene "mostrar_info", pero hace otra cosa (polimorfismo)
+        # Esta clase también tiene "mostrar_info", pero hace otra cosa (polimorfismo)
     def mostrar_info(self):
         return f"Usuario: {self.nombre} {self.apellido} | DNI: {self.dni} | Correo: {self.correo}"

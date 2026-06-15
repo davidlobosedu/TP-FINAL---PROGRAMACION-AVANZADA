@@ -11,62 +11,26 @@ Operaciones mínimas: Alta, Modificación, Baja y Listado.
 /Gestión de Usuarios
 Datos mínimos: Nombre, Apellido, DNI y Correo electrónico.
 Operaciones mínimas: Alta, Modificación, Baja y Listado.
-/Gestión de Préstamos
+Gestión de Préstamos
 Registrar préstamos, devoluciones y consultar préstamos activos.
 Un libro no podrá prestarse si ya posee un préstamo activo.
 Se deberá registrar fecha de préstamo y devolución.
-
 Requerimientos Técnicos  - - - - - - - - - - - - - - - - - - - -  - - - - - - - - - - - - - - - - - - - - - - - - - -
 • Implementar al menos una jerarquía de herencia.
 • Implementar al menos un comportamiento polimórfico.
 • Implementar al menos una relación de agregación.
-• Implementar al menos una relación de composición.
-• Implementar al menos un decorador propio e integrarlo dentro del sistema.
+• Implementar al menos una relación de composición.• Implementar al menos un decorador propio e integrarlo dentro del sistema.
 • Implementar una metaclase utilizando type o una clase derivada de type.
 • Implementar al menos un patrón de diseño, debidamente justificado.
-
 Diagrama UML  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 El trabajo deberá incluir un diagrama UML completo que represente: Clases Atributos Métodos
 principales Relaciones de herencia Relaciones de agregación Relaciones de composición
-
 Git y GitHub  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 1. Crear un repositorio para el proyecto.
 2. Invitar al docente mediante el usuario compudiego.
 3. Mantener un historial de commits representativo del desarrollo realizado.
 4. Utilizar mensajes de commit descriptivos.
-
 README.md  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 El repositorio deberá contener obligatoriamente un archivo README.md con: Título del trabajo.
 Breve descripción del sistema desarrollado. Nombre y apellido de todos los integrantes del grupo.
 Instrucciones para ejecutar el proyecto. """
-
-import datetime
-# aca se genera el decorador propio que imprime fecha
-# wrapper actua como un intermediario entre funciones originales y decoradas.
-def auditar_accion(funcion):
-    def wrapper(*args, **kwargs):
-        hora_actual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{hora_actual}] Ejecutando acción: {funcion.__name__}...")
-        # llama a la función original
-        return funcion(*args, **kwargs)
-    return wrapper 
-
-# Se construye una metaclase con type.
-# Acá} se crea una base genérica para cualquier material de la biblioteca.
-
-def inicializar_material(self, titulo, autor):
-    self.titulo = titulo
-    self.autor = autor
-
-def info_base(self):
-    return f"Material genérico: {self.titulo}"
-
-# Acá se crea la clase dinámicamente
-MaterialBibliografico = type(
-    'MaterialBibliografico', # Nombre de la clase
-    (),                      # Clases de las que hereda (ninguna)
-    {
-        '__init__': inicializar_material, 
-        'mostrar_info': info_base
-    }
-)

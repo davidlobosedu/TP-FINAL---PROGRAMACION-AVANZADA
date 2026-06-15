@@ -81,3 +81,30 @@ class FichaTecnica:
 
     def __str__(self):
         return f"ISBN: {self.isbn} | Año: {self.anio} | Páginas: {self.paginas}"
+    
+# Herencia: Libro hereda de MaterialBibliografico
+class Libro(MaterialBibliografico):
+    def __init__(self, titulo, autor, isbn, anio, paginas):
+        # Llamamos al inicializador de la clase padre (MaterialBibliografico)
+        super().__init__(titulo, autor)
+        
+        # Composición: libro crea internamente su FichaTecnica.
+        # Si libro se elimina, su ficha desaparece con él.
+        self.ficha = FichaTecnica(isbn, anio, paginas)
+        self.esta_prestado = False
+
+    def mostrar_info(self):
+        # acá se aplica polimorfismo cuando se sobreescribe "mostrar_info" de la clase padre.        
+        estado = "[PRESTADO]" if self.esta_prestado else "[DISPONIBLE]"
+        return f"Libro: {self.titulo} de {self.autor} | {self.ficha} -> {estado}"        
+
+class Usuario:
+    def __init__(self, nombre, apellido, dni, correo):
+        self.nombre = nombre
+        self.apellido = apellido
+        self.dni = dni
+        self.correo = correo
+
+    # Esta clase también tiene "mostrar_info", pero hace otra cosa (polimorfismo)
+    def mostrar_info(self):
+        return f"Usuario: {self.nombre} {self.apellido} | DNI: {self.dni} | Correo: {self.correo}"

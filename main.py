@@ -128,7 +128,7 @@ class Prestamo:
 class GestorBiblioteca:
     _instancia = None
     # elegí el patrón singleton ya que puede existir una instancia de GestorBiblioteca.
-    # método __new__ intercepta la creación del objeto, si ya existe devuelve el mismo en vez de crear uno nuevo.
+    # método __new__ toma la creación del objeto, si ya existe devuelve el mismo en vez de crear uno nuevo.
     def __new__(cls, *args, **kwargs):
         if not cls._instancia:
             cls._instancia = super(GestorBiblioteca, cls).__new__(cls, *args, **kwargs)
@@ -137,3 +137,88 @@ class GestorBiblioteca:
             cls._instancia.usuarios = []
             cls._instancia.prestamos = []
         return cls._instancia
+    
+
+    # alta, modificación, baja, listado de libros.
+    # acá se aplica el decorador propio
+    @auditar_accion 
+    def alta_libro(self, libro):
+        self.libros.append(libro)
+        print(f"Libro '{libro.titulo}' agregado con éxito.")
+
+    def listar_libros(self):
+        print("\n--- CATÁLOGO DE LIBROS ---")
+        for libro in self.libros:
+            print(libro.mostrar_info())
+            
+    @auditar_accion
+    def baja_libro(self, isbn):
+        for libro in self.libros:
+            if libro.ficha.isbn == isbn:
+                if libro.esta_prestado:
+                    print("Error: No se puede dar de baja un libro prestado.")
+                    return
+                self.libros.remove(libro)
+                print(f"Libro '{libro.titulo}' eliminado.")
+                return
+        print("Libro no encontrado.")
+
+    # alta, modificación, baja, listado de usuarios.
+    @auditar_accion
+    def alta_usuario(self, usuario):
+        self.usuarios.append(usuario)
+        print(f"Usuario '{usuario.nombre}' agregado con éxito.")
+
+    def listar_usuarios(self):
+        print("\n--- LISTA DE USUARIOS ---")
+        for usuario in self.usuarios:
+            print(usuario.mostrar_info())
+
+    @auditar_accion
+    def baja_usuario(self, dni):
+        for u in self.usuarios:
+            if u.dni == dni:
+                self.usuarios.remove(u)
+                print(f"Usuario con DNI {dni} eliminado.")
+                return
+        print("Usuario no encontrado.")
+
+    # Registrar préstamos, devoluciones y consultar préstamos .
+    @auditar_accion
+    def registrar_prestamo(self, isbn_libro, dni_usuario):
+        # Buscamos los objetos
+        libro_encontrado = next((l for l in self.libros if l.ficha.isbn == isbn_libro), None)
+        usuario_encontrado = next((u for u in self.usuarios if u.dni == dni_usuario), None)
+
+        if not libro_encontrado or not usuario_encontrado:
+            print("Error: libro o usuario no existen.")
+            return
+
+        if libro_encontrado.esta_prestado:
+            print(f"Error: el libro '{libro_encontrado.titulo}' tiene un préstamo activo.")
+            return
+
+        # se crea el préstamo pasando los objetos (agregación)
+        nuevo_prestamo = Prestamo(libro_encontrado, usuario_encontrado)
+        self.prestamos.append(nuevo_prestamo)
+        libro_encontrado.esta_prestado = True
+        print(f"Préstamo registrado exitosamente.")
+
+    @auditar_accion
+    def registrar_devolucion(self, isbn_libro):
+        for p in self.prestamos:
+            if p.libro.ficha.isbn == isbn_libro and p.fecha_devolucion is None:
+                p.finalizar()
+                p.libro.esta_prestado = False
+                print(f"Devolución de '{p.libro.titulo}' registrada exitosamente.")
+                return
+        print("Error: no hay préstamos activos para ese libro.")
+
+    def consultar_prestamos_activos(self):
+        print("\n--- PRÉSTAMOS ACTIVOS ---")
+        activos = [p for p in self.prestamos if p.fecha_devolucion is None]
+        if not activos:
+            print("No hay préstamos en curso.")
+        else:
+            for p in activos:
+                print(p)

@@ -222,3 +222,267 @@ class GestorBiblioteca:
         else:
             for p in activos:
                 print(p)
+
+            import datetime
+
+# =====================================================================
+# REQUERIMIENTO TÉCNICO 5: DECORADOR PROPIO
+# =====================================================================
+# Un decorador envuelve una función. Aquí creamos uno que imprime
+# la fecha y la hora cada vez que hagamos una acción importante, 
+# dejando un "registro" (log) automático.
+def auditar_accion(funcion):
+    def wrapper(*args, **kwargs):
+        hora_actual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{hora_actual}] Ejecutando acción: {funcion.__name__}...")
+        # Llama a la función original
+        return funcion(*args, **kwargs)
+    return wrapper
+
+# =====================================================================
+# REQUERIMIENTO TÉCNICO 6: METACLASE CON TYPE
+# =====================================================================
+# En vez de usar "class Material:", usamos type(). 
+# Creamos una base genérica para cualquier material de la biblioteca.
+
+def inicializar_material(self, titulo, autor):
+    self.titulo = titulo
+    self.autor = autor
+
+def info_base(self):
+    return f"Material genérico: {self.titulo}"
+
+# Creación de la clase dinámicamente
+MaterialBibliografico = type(
+    'MaterialBibliografico', # Nombre de la clase
+    (),                      # Clases de las que hereda (ninguna)
+    {
+        '__init__': inicializar_material, 
+        'mostrar_info': info_base
+    }
+)
+
+# =====================================================================
+# REQUERIMIENTO TÉCNICO 4: COMPOSICIÓN
+# =====================================================================
+# La FichaTecnica no tiene sentido que exista suelta si no hay un libro.
+class FichaTecnica:
+    def __init__(self, isbn, anio, paginas):
+        self.isbn = isbn
+        self.anio = anio
+        self.paginas = paginas
+
+    def __str__(self):
+        return f"ISBN: {self.isbn} | Año: {self.anio} | Páginas: {self.paginas}"
+
+# =====================================================================
+# REQUERIMIENTO TÉCNICO 1: HERENCIA
+# =====================================================================
+# Libro hereda de MaterialBibliografico
+class Libro(MaterialBibliografico):
+    def __init__(self, titulo, autor, isbn, anio, paginas):
+        # Llamamos al inicializador de la clase padre (MaterialBibliografico)
+        super().__init__(titulo, autor)
+        
+        # ¡COMPOSICIÓN AQUÍ! El libro crea "internamente" su propia FichaTecnica.
+        # Si el libro se elimina, su ficha desaparece con él.
+        self.ficha = FichaTecnica(isbn, anio, paginas)
+        self.esta_prestado = False
+
+    # =================================================================
+    # REQUERIMIENTO TÉCNICO 2: POLIMORFISMO
+    # =================================================================
+    # Sobrescribimos "mostrar_info" para que actúe distinto a la clase padre.
+    def mostrar_info(self):
+        estado = "[PRESTADO]" if self.esta_prestado else "[DISPONIBLE]"
+        return f"Libro: {self.titulo} de {self.autor} | {self.ficha} -> {estado}"
+
+
+class Usuario:
+    def __init__(self, nombre, apellido, dni, correo):
+        self.nombre = nombre
+        self.apellido = apellido
+        self.dni = dni
+        self.correo = correo
+
+    # POLIMORFISMO: Esta clase también tiene "mostrar_info", pero hace otra cosa.
+    def mostrar_info(self):
+        return f"Usuario: {self.nombre} {self.apellido} | DNI: {self.dni} | Correo: {self.correo}"
+
+# =====================================================================
+# REQUERIMIENTO TÉCNICO 3: AGREGACIÓN
+# =====================================================================
+# Un Préstamo junta un Libro y un Usuario. Si el préstamo termina o se borra,
+# el Libro y el Usuario no mueren, siguen existiendo en el sistema por separado.
+class Prestamo:
+    def __init__(self, libro, usuario):
+        self.libro = libro       # Agregación del objeto Libro
+        self.usuario = usuario   # Agregación del objeto Usuario
+        self.fecha_prestamo = datetime.datetime.now().strftime("%Y-%m-%d")
+        self.fecha_devolucion = None
+
+    def finalizar(self):
+        self.fecha_devolucion = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    def __str__(self):
+        estado = "Activo" if not self.fecha_devolucion else f"Devuelto el {self.fecha_devolucion}"
+        return f"Préstamo: '{self.libro.titulo}' prestado a {self.usuario.nombre} ({estado})"
+
+
+# =====================================================================
+# REQUERIMIENTO TÉCNICO 7: PATRÓN DE DISEÑO (SINGLETON)
+# =====================================================================
+# Justificación: Solo debe haber UNA instancia del GestorBiblioteca corriendo
+# para asegurarnos de que no haya múltiples listas de libros o usuarios duplicadas
+# y desincronizadas en la memoria.
+class GestorBiblioteca:
+    _instancia = None
+
+    # El método __new__ intercepta la creación del objeto. 
+    # Si ya existe, devuelve el mismo en vez de crear uno nuevo.
+    def __new__(cls, *args, **kwargs):
+        if not cls._instancia:
+            cls._instancia = super(GestorBiblioteca, cls).__new__(cls, *args, **kwargs)
+            # Inicializamos las listas de datos (bases de datos en memoria)
+            cls._instancia.libros = []
+            cls._instancia.usuarios = []
+            cls._instancia.prestamos = []
+        return cls._instancia
+
+    # -----------------------------------------------------
+    # GESTIÓN DE LIBROS (Alta, Modificación, Baja, Listado)
+    # -----------------------------------------------------
+    @auditar_accion # Aplicamos nuestro decorador propio
+    def alta_libro(self, libro):
+        self.libros.append(libro)
+        print(f"-> Libro '{libro.titulo}' agregado con éxito.")
+
+    def listar_libros(self):
+        print("\n--- CATÁLOGO DE LIBROS ---")
+        for libro in self.libros:
+            print(libro.mostrar_info())
+            
+    @auditar_accion
+    def baja_libro(self, isbn):
+        for libro in self.libros:
+            if libro.ficha.isbn == isbn:
+                if libro.esta_prestado:
+                    print("-> Error: No puedes dar de baja un libro prestado.")
+                    return
+                self.libros.remove(libro)
+                print(f"-> Libro '{libro.titulo}' eliminado.")
+                return
+        print("-> Libro no encontrado.")
+
+    # -----------------------------------------------------
+    # GESTIÓN DE USUARIOS (Alta, Modificación, Baja, Listado)
+    # -----------------------------------------------------
+    @auditar_accion
+    def alta_usuario(self, usuario):
+        self.usuarios.append(usuario)
+        print(f"-> Usuario '{usuario.nombre}' agregado con éxito.")
+
+    def listar_usuarios(self):
+        print("\n--- LISTA DE USUARIOS ---")
+        for usuario in self.usuarios:
+            print(usuario.mostrar_info())
+
+    @auditar_accion
+    def baja_usuario(self, dni):
+        for u in self.usuarios:
+            if u.dni == dni:
+                self.usuarios.remove(u)
+                print(f"-> Usuario con DNI {dni} eliminado.")
+                return
+        print("-> Usuario no encontrado.")
+
+    # -----------------------------------------------------
+    # GESTIÓN DE PRÉSTAMOS
+    # -----------------------------------------------------
+    @auditar_accion
+    def registrar_prestamo(self, isbn_libro, dni_usuario):
+        # Buscamos los objetos
+        libro_encontrado = next((l for l in self.libros if l.ficha.isbn == isbn_libro), None)
+        usuario_encontrado = next((u for u in self.usuarios if u.dni == dni_usuario), None)
+
+        if not libro_encontrado or not usuario_encontrado:
+            print("-> Error: Libro o usuario no existen.")
+            return
+
+        if libro_encontrado.esta_prestado:
+            print(f"-> Error: El libro '{libro_encontrado.titulo}' ya posee un préstamo activo.")
+            return
+
+        # Creamos el préstamo pasando los objetos (Agregación)
+        nuevo_prestamo = Prestamo(libro_encontrado, usuario_encontrado)
+        self.prestamos.append(nuevo_prestamo)
+        libro_encontrado.esta_prestado = True
+        print(f"-> Préstamo registrado con éxito.")
+
+    @auditar_accion
+    def registrar_devolucion(self, isbn_libro):
+        for p in self.prestamos:
+            if p.libro.ficha.isbn == isbn_libro and p.fecha_devolucion is None:
+                p.finalizar()
+                p.libro.esta_prestado = False
+                print(f"-> Devolución de '{p.libro.titulo}' registrada con éxito.")
+                return
+        print("-> Error: No hay préstamos activos para ese libro.")
+
+    def consultar_prestamos_activos(self):
+        print("\n--- PRÉSTAMOS ACTIVOS ---")
+        activos = [p for p in self.prestamos if p.fecha_devolucion is None]
+        if not activos:
+            print("No hay préstamos en curso.")
+        else:
+            for p in activos:
+                print(p)
+
+
+# pruebas 
+if __name__ == "__main__":
+    # se instancia el sistema, y se prueba el patrón singleton creando dos variables que tendrian que apuntar al mismo objeto.
+    sistema = GestorBiblioteca()
+    sistema_duplicado = GestorBiblioteca()
+    
+    # si el patrón singleton funciona, ambas variables deberían ser la misma instancia.
+    print(f"¿Son el mismo sistema? {sistema is sistema_duplicado}\n")
+
+    #  alta de usuarios
+    u1 = Usuario("David", "Lobos", "31289111", "davidlobos@mail.com")
+    u2 = Usuario("Luis", "Pérez", "22222222", "luis@mail.com")
+    sistema.alta_usuario(u1)
+    sistema.alta_usuario(u2)
+
+    # alta de libros
+    l1 = Libro("Don Quijote de la Mancha", "Miguel de Cervantes", "978-84-206", 1605, 1038)
+    l2 = Libro("Cien años de soledad", "Gabriel García Márquez", "978-0-307", 1967, 496)
+    l3 = Libro("Orgullo y prejuicio", "Jane Austen", "978-0-14", 1813, 432)
+    l4 = Libro("Crónica de una muerte anunciada", "Gabriel García Márquez", "978-1-4000", 1981, 128)
+    l5 = Libro("Fahrenheit 451", "Ray Bradbury", "978-1-4516", 1953, 176)
+    sistema.alta_libro(l1)
+    sistema.alta_libro(l2)
+    sistema.alta_libro(l3)
+    sistema.alta_libro(l4)  
+    sistema.alta_libro(l5)
+
+    # ejecutar la lista para ver el catalogo completo
+    sistema.listar_libros()
+
+    # prueba de prestamos
+    print("\n--- INICIANDO PRÉSTAMO ---")
+    sistema.registrar_prestamo("978-84-206", "31289111")
+    
+    # probar la validación de libros ya prestados
+    print("\n--- INTENTANDO PRESTAR EL MISMO LIBRO ---")
+    sistema.registrar_prestamo("978-84-206", "22222222")
+
+    # consulta de prestamos activos
+    sistema.consultar_prestamos_activos()
+
+    # prueba de devolución
+    print("\n--- INICIANDO DEVOLUCIÓN ---")
+    sistema.registrar_devolucion("978-84-206")
+    
+    # ver la lista actualizada después de la devolución
+    sistema.listar_libros()

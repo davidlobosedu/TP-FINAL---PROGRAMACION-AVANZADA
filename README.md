@@ -16,7 +16,7 @@ la fecha/hora exacta de cada operación.
 Patrones de Diseño: Aplicación del patrón creacional Singleton para garantizar que exista una única
 instancia global del sistema gestor (`BibliotecaDigital`).
 
-Integrantes del grupo
+Integrantes del grupo:
 David Lobos
 
 
